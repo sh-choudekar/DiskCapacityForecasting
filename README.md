@@ -1,5 +1,7 @@
 # Disk Capacity Forecasting (Power BI + PowerShell)
 
+
+
 &#x20;
 
 Weekly disk capacity capture from Windows servers + a Power BI model to forecast runout at the drive level.
@@ -9,6 +11,7 @@ Weekly disk capacity capture from Windows servers + a Power BI model to forecast
 ## Table of Contents
 
 - [Overview](#overview)
+- [Preview](#preview)
 - [Prerequisites](#prerequisites)
 - [Folder Structure (suggested)](#folder-structure-suggested)
 - [Data Schema](#data-schema)
@@ -22,7 +25,11 @@ Weekly disk capacity capture from Windows servers + a Power BI model to forecast
 - [Power BI Setup](#power-bi-setup)
   - [Import](#import)
   - [Date Table](#date-table)
-  - [Measures](#measures) \$1- [CI / Linting](#ci--linting) \$2
+  - [Measures](#measures)
+  - [Recommended Visuals](#recommended-visuals)
+- [Publish & Refresh](#publish--refresh)
+- [CI / Linting](#ci--linting)
+- [Troubleshooting](#troubleshooting)
 - [Security Notes](#security-notes)
 - [License](#license)
 
@@ -41,6 +48,10 @@ Works with the following CSV schema (one row per `ServerName` + `Drive Letters` 
 ```
 Capture Date, Capture Day, ServerName, Drive Letters, TotalSizeDrive, FreeSpaceDrive, FreeSpacePercentage
 ```
+
+## Preview
+
+
 
 ---
 
@@ -372,6 +383,20 @@ IF (
 
 ---
 
+## Publish & Refresh
+
+1. **Publish** the PBIX to Power BI Service.
+2. **Data source**: Folder connector pointing to your repo or shared path (e.g., `data/output`).
+3. If the folder is on-prem:
+   - Install and configure **On-premises Data Gateway** (Standard mode).
+   - Map the dataset’s source to the gateway.
+4. **Schedule refresh** (weekly, Tuesday morning is good for Monday snapshots).
+5. If using OneDrive/SharePoint instead of a local folder, you can refresh **without gateway** (recommended for portability).
+
+> Locale note: If your DAX editor auto-switches to **semicolons** for function arguments, let it. Measures here use commas but work the same with semicolons.
+
+---
+
 ## CI / Linting
 
 - Workflow: `.github/workflows/powershell-lint.yml`
@@ -393,7 +418,7 @@ Invoke-ScriptAnalyzer -Path ./scripts -Recurse -Settings ./.config/PSScriptAnaly
 
 - **Power BI: “The expression is not a valid table expression.”** You pasted a measure into **New table**. Create measures via **Modeling → New measure**. Only the Calendar goes into **New table**.
 - **Power BI forecasting blank/odd:** Ensure X‑axis is **Continuous**; at least \~10 data points; check that you’re filtered to a single drive for clarity.
-- **DAX error around ****\`\`****:** You likely pasted multiple measures into one. Create each measure separately.
+- \*\*- **DAX error around Avg/LastDate**: You likely pasted multiple measures into one. Create each measure separately via **New measure**.
 - **Capture script can’t connect:** Check WinRM running, firewall open, and permissions (Admin or WMI access). Try `-Credential`.
 - **No drives returned:** If you didn’t use `-IncludeAllDrives`, only `D: E: F:` are captured. Add the switch or change `-DriveLetters`.
 
