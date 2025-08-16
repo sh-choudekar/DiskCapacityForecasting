@@ -1,0 +1,45 @@
+name: PowerShell Lint
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'scripts/**/*.ps1'
+      - '.github/workflows/powershell-lint.yml'
+  pull_request:
+    paths:
+      - 'scripts/**/*.ps1'
+      - '.github/workflows/powershell-lint.yml'
+
+jobs:
+  lint:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Lint PowerShell scripts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          if (-not (Test-Path ./scripts)) {
+            Write-Host 'No scripts directory found. Skipping.'
+            exit 0
+          }
+          $results = Invoke-ScriptAnalyzer -Path ./scripts -Recurse -Severity Error,Warning -ReportSummary
+          if ($results) {
+            $results | Format-Table
+            $hasErrors = $results | Where-Object Severity -eq 'Error'
+            $hasWarnings = $results | Where-Object Severity -eq 'Warning'
+            if ($hasErrors) { Write-Error 'PSScriptAnalyzer errors found.' }
+            elseif ($hasWarnings) { Write-Error 'PSScriptAnalyzer warnings found (failing build to enforce clean lint).' }
+          } else {
+            Write-Host 'No issues found.'
+          }
